@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
+import json
+import os
 
 # ==================== CONFIG ====================
 st.set_page_config(
@@ -14,6 +16,9 @@ st.set_page_config(
 # ==================== TEMA MANAGEMENT ====================
 if 'tema' not in st.session_state:
     st.session_state.tema = 'light'
+
+if 'history' not in st.session_state:
+    st.session_state.history = []
 
 # Dictionary Tema
 TEMA_CONFIG = {
@@ -70,6 +75,28 @@ TEMA_CONFIG = {
 }
 
 tema_aktif = TEMA_CONFIG[st.session_state.tema]
+
+# ==================== HELPER FUNCTIONS ====================
+def add_to_history(operation, inputs, result):
+    """Add calculation to history"""
+    entry = {
+        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        'operation': operation,
+        'inputs': inputs,
+        'result': result
+    }
+    st.session_state.history.append(entry)
+
+def export_history_to_csv():
+    """Export calculation history as CSV"""
+    if not st.session_state.history:
+        return None
+    df = pd.DataFrame(st.session_state.history)
+    return df.to_csv(index=False)
+
+def clear_history():
+    """Clear all history"""
+    st.session_state.history = []
 
 # Custom CSS dinamis
 st.markdown(f"""
@@ -202,13 +229,14 @@ with st.sidebar:
     st.divider()
     st.markdown("### 📌 Info Aplikasi")
     st.info("""
-    **ChemLab Mini Tools v2.0**
+    **ChemLab Mini Tools v2.1**
     
     Platform pembelajaran kimia interaktif dengan:
     • 🧮 Kalkulator pengenceran
     • 🎯 Game quiz warna reaksi
     • 🔧 Troubleshooting praktikum
     • 🎨 5 tema warna berbeda
+    • 📊 Riwayat perhitungan
     """)
 
 # ==================== DASHBOARD ====================
@@ -274,64 +302,44 @@ if menu == "📊 Dashboard":
                 fig.update_layout(height=400, paper_bgcolor=tema_aktif['bg_color'], font=dict(color=tema_aktif['text_color']))
                 st.plotly_chart(fig, use_container_width=True)
             except Exception as e:
-                st.error(f"Terjadi kesalahan saat membuat grafik: {str(e)}")
+                st.error(f"❌ Terjadi kesalahan saat membuat grafik: {str(e)}")
         else:
             st.info("📭 Belum ada data quiz. Mulai main quiz untuk melihat statistik!")
     
     with col2:
-        st.subheader("�� Progress Pembelajaran")
-        
-        aktivitas = {
-            "Kalkulator": 5,
-            "Quiz": st.session_state.get('total', 0),
-            "Troubleshooting": 3,
-            "Tips Belajar": 10
-        }
-        
-        try:
-            fig2 = go.Figure(data=[
-                go.Bar(
-                    x=list(aktivitas.keys()),
-                    y=list(aktivitas.values()),
-                    marker=dict(color=tema_aktif['secondary'])
-                )
-            ])
-            fig2.update_layout(height=400, paper_bgcolor=tema_aktif['bg_color'], plot_bgcolor=tema_aktif['card_bg'], font=dict(color=tema_aktif['text_color']))
-            st.plotly_chart(fig2, use_container_width=True)
-        except Exception as e:
-            st.error(f"Terjadi kesalahan saat membuat grafik: {str(e)}")
+        st.subheader("📊 Riwayat Perhitungan")
+        if st.session_state.history:
+            st.success(f"✅ Total perhitungan: {len(st.session_state.history)}")
+            
+            # Show last 5 calculations
+            st.write("**5 Perhitungan Terakhir:**")
+            for i, entry in enumerate(reversed(st.session_state.history[-5:]), 1):
+                st.write(f"{i}. {entry['timestamp']} - {entry['operation']}")
+        else:
+            st.info("📭 Belum ada riwayat perhitungan")
     
     st.divider()
-    
-    # Info Dashboard
-    st.subheader("📈 Ringkasan Aktivitas")
-    
+    st.subheader("📥 Export Data")
     col1, col2 = st.columns(2)
-    
     with col1:
-        st.markdown("""
-        ### 📋 Fitur yang Tersedia
-        - **Kalkulator Pengenceran**: Hitung M₁V₁ = M₂V₂ dengan mudah
-        - **Quiz Warna Reaksi**: Asah pengetahuan kimia Anda
-        - **Troubleshooting**: Analisis kesalahan praktikum
-        - **Panduan Lengkap**: Tips dan trik sukses praktikum
-        """)
-    
+        csv_data = export_history_to_csv()
+        if csv_data:
+            st.download_button(
+                label="📥 Unduh Riwayat (CSV)",
+                data=csv_data,
+                file_name=f"chemlab_history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                key="download_csv"
+            )
     with col2:
-        st.markdown(f"""
-        ### 🎨 Tema yang Tersedia
-        1. **Light** - Tema terang klasik
-        2. **Dark** - Tema gelap modern
-        3. **Ocean** - Tema biru seperti laut
-        4. **Forest** - Tema hijau alam
-        5. **Sunset** - Tema hangat matahari terbenam
-        
-        **Tema Aktif**: {st.session_state.tema.upper()}
-        """)
+        if st.button("🗑️ Hapus Semua Riwayat", key="clear_history_btn"):
+            clear_history()
+            st.success("✅ Riwayat berhasil dihapus!")
+            st.rerun()
 
 # ==================== HALAMAN BERANDA ====================
 elif menu == "🏠 Beranda":
-    st.title("🧪 ChemLab Mini Tools v2.0")
+    st.title("🧪 ChemLab Mini Tools v2.1")
     st.markdown("### Selamat datang di platform pembelajaran kimia interaktif!")
     
     col1, col2, col3 = st.columns(3)
@@ -371,7 +379,7 @@ elif menu == "🏠 Beranda":
         
         ✅ **Visualisasi**: Grafik dan chart untuk memahami konsep dengan lebih baik
         
-        ✅ **Panduan Lengkap**: Panduan step-by-step untuk setiap fitur
+        ✅ **Riwayat**: Simpan dan export semua perhitungan Anda
         
         ✅ **Tema Dinamis**: Pilih 5 tema warna berbeda sesuai preferensi Anda
         """)
@@ -429,6 +437,13 @@ elif menu == "📐 Kalkulator Pengenceran":
                             </div>
                             """, unsafe_allow_html=True)
                             
+                            # Add to history
+                            add_to_history(
+                                "Hitung V2",
+                                {"M1": M1, "V1": V1, "M2": M2},
+                                {"V2": V2}
+                            )
+                            
                             # Visualisasi
                             fig = go.Figure()
                             fig.add_trace(go.Bar(
@@ -472,6 +487,13 @@ elif menu == "📐 Kalkulator Pengenceran":
                                 <p><strong>Tingkat pengenceran:</strong> {dilution_text}</p>
                             </div>
                             """, unsafe_allow_html=True)
+                            
+                            # Add to history
+                            add_to_history(
+                                "Hitung M2",
+                                {"M1": M1, "V1": V1, "V2": V2},
+                                {"M2": M2}
+                            )
                             
                             # Visualisasi
                             fig = go.Figure()
@@ -535,7 +557,22 @@ elif menu == "📐 Kalkulator Pengenceran":
         """)
     
     with tab3:
-        st.info("💾 Riwayat perhitungan akan ditampilkan di sini")
+        st.subheader("💾 Riwayat Perhitungan")
+        if st.session_state.history:
+            df_history = pd.DataFrame(st.session_state.history)
+            st.dataframe(df_history, use_container_width=True)
+            
+            # Export button
+            csv_data = export_history_to_csv()
+            st.download_button(
+                label="📥 Unduh Riwayat (CSV)",
+                data=csv_data,
+                file_name=f"calculation_history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                key="download_history_csv"
+            )
+        else:
+            st.info("💾 Belum ada riwayat perhitungan")
 
 # ==================== TEBAK WARNA REAKSI ====================
 elif menu == "🎮 Tebak Warna Reaksi":
@@ -839,12 +876,12 @@ elif menu == "📚 Panduan & Tips":
             df_reaksi = pd.DataFrame(data_reaksi)
             st.dataframe(df_reaksi, use_container_width=True)
         except Exception as e:
-            st.error(f"Terjadi kesalahan saat menampilkan tabel: {str(e)}")
+            st.error(f"❌ Terjadi kesalahan saat menampilkan tabel: {str(e)}")
 
 st.divider()
 st.markdown(f"""
 <div style="text-align: center; color: {tema_aktif['text_color']}; opacity: 0.7;">
-    <p>🧪 <strong>ChemLab Mini Tools v2.0</strong> | Tema: <strong>{st.session_state.tema.upper()}</strong></p>
+    <p>🧪 <strong>ChemLab Mini Tools v2.1</strong> | Tema: <strong>{st.session_state.tema.upper()}</strong></p>
     <p>© 2026 | Platform Pembelajaran Kimia Interaktif</p>
 </div>
 """, unsafe_allow_html=True)
