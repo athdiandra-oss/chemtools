@@ -161,25 +161,25 @@ with st.sidebar:
     # Tampilkan preview tema
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("💡", help="Light Theme"):
+        if st.button("💡", help="Light Theme", key="light_btn"):
             st.session_state.tema = 'light'
             st.rerun()
     with col2:
-        if st.button("🌙", help="Dark Theme"):
+        if st.button("🌙", help="Dark Theme", key="dark_btn"):
             st.session_state.tema = 'dark'
             st.rerun()
     with col3:
-        if st.button("🌊", help="Ocean Theme"):
+        if st.button("🌊", help="Ocean Theme", key="ocean_btn"):
             st.session_state.tema = 'ocean'
             st.rerun()
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("🌲", help="Forest Theme"):
+        if st.button("🌲", help="Forest Theme", key="forest_btn"):
             st.session_state.tema = 'forest'
             st.rerun()
     with col2:
-        if st.button("🌅", help="Sunset Theme"):
+        if st.button("🌅", help="Sunset Theme", key="sunset_btn"):
             st.session_state.tema = 'sunset'
             st.rerun()
     
@@ -263,20 +263,23 @@ if menu == "📊 Dashboard":
         skor = st.session_state.get('skor', 0)
         
         if total > 0:
-            fig = go.Figure(data=[
-                go.Pie(
-                    labels=['Benar', 'Salah'],
-                    values=[skor, total - skor],
-                    marker=dict(colors=[tema_aktif['secondary'], tema_aktif['primary']])
-                )
-            ])
-            fig.update_layout(height=400, paper_bgcolor=tema_aktif['bg_color'], font=dict(color=tema_aktif['text_color']))
-            st.plotly_chart(fig, use_container_width=True)
+            try:
+                fig = go.Figure(data=[
+                    go.Pie(
+                        labels=['Benar', 'Salah'],
+                        values=[skor, total - skor],
+                        marker=dict(colors=[tema_aktif['secondary'], tema_aktif['primary']])
+                    )
+                ])
+                fig.update_layout(height=400, paper_bgcolor=tema_aktif['bg_color'], font=dict(color=tema_aktif['text_color']))
+                st.plotly_chart(fig, use_container_width=True)
+            except Exception as e:
+                st.error(f"Terjadi kesalahan saat membuat grafik: {str(e)}")
         else:
             st.info("📭 Belum ada data quiz. Mulai main quiz untuk melihat statistik!")
     
     with col2:
-        st.subheader("🎯 Progress Pembelajaran")
+        st.subheader("�� Progress Pembelajaran")
         
         aktivitas = {
             "Kalkulator": 5,
@@ -285,15 +288,18 @@ if menu == "📊 Dashboard":
             "Tips Belajar": 10
         }
         
-        fig2 = go.Figure(data=[
-            go.Bar(
-                x=list(aktivitas.keys()),
-                y=list(aktivitas.values()),
-                marker=dict(color=tema_aktif['secondary'])
-            )
-        ])
-        fig2.update_layout(height=400, paper_bgcolor=tema_aktif['bg_color'], plot_bgcolor=tema_aktif['card_bg'], font=dict(color=tema_aktif['text_color']))
-        st.plotly_chart(fig2, use_container_width=True)
+        try:
+            fig2 = go.Figure(data=[
+                go.Bar(
+                    x=list(aktivitas.keys()),
+                    y=list(aktivitas.values()),
+                    marker=dict(color=tema_aktif['secondary'])
+                )
+            ])
+            fig2.update_layout(height=400, paper_bgcolor=tema_aktif['bg_color'], plot_bgcolor=tema_aktif['card_bg'], font=dict(color=tema_aktif['text_color']))
+            st.plotly_chart(fig2, use_container_width=True)
+        except Exception as e:
+            st.error(f"Terjadi kesalahan saat membuat grafik: {str(e)}")
     
     st.divider()
     
@@ -404,76 +410,88 @@ elif menu == "📐 Kalkulator Pengenceran":
             )
             
             if pilihan_hitung == "Volume Akhir (V2)":
-                M2 = st.number_input("Konsentrasi Akhir (M2) [mol/L]", min_value=0.0, value=0.5, step=0.1)
-                hitung_btn = st.button("🔢 Hitung V2", use_container_width=True)
+                M2 = st.number_input("Konsentrasi Akhir (M2) [mol/L]", min_value=0.001, value=0.5, step=0.1, help="Nilai harus lebih besar dari 0")
+                hitung_btn = st.button("🔢 Hitung V2", use_container_width=True, key="calc_v2")
                 
                 if hitung_btn:
-                    if M2 != 0:
-                        V2 = (M1 * V1) / M2
-                        st.markdown(f"""
-                        <div class="success-card">
-                            <h4>✅ Hasil Perhitungan</h4>
-                            <h2>V2 = {V2:.2f} mL</h2>
-                            <p><strong>Arti:</strong> Encerkan {V1:.0f} mL larutan {M1} M dengan air hingga volumenya menjadi {V2:.2f} mL</p>
-                            <p><strong>Air yang ditambahkan:</strong> {V2 - V1:.2f} mL</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Visualisasi
-                        fig = go.Figure()
-                        fig.add_trace(go.Bar(
-                            x=['Awal', 'Akhir'],
-                            y=[V1, V2],
-                            marker=dict(color=[tema_aktif['primary'], tema_aktif['secondary']]),
-                            text=[f'{V1:.0f} mL', f'{V2:.2f} mL'],
-                            textposition='auto',
-                        ))
-                        fig.update_layout(
-                            title="Perubahan Volume",
-                            height=300,
-                            paper_bgcolor=tema_aktif['bg_color'],
-                            plot_bgcolor=tema_aktif['card_bg'],
-                            font=dict(color=tema_aktif['text_color'])
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        st.error("❌ M2 tidak boleh nol!")
+                    try:
+                        if M2 <= 0:
+                            st.warning("⚠️ Konsentrasi akhir (M2) harus lebih besar dari 0!")
+                        else:
+                            V2 = (M1 * V1) / M2
+                            st.success(f"✅ Hasil Perhitungan")
+                            st.markdown(f"""
+                            <div class="success-card">
+                                <h4>✅ Hasil Perhitungan</h4>
+                                <h2>V2 = {V2:.2f} mL</h2>
+                                <p><strong>Arti:</strong> Encerkan {V1:.0f} mL larutan {M1} M dengan air hingga volumenya menjadi {V2:.2f} mL</p>
+                                <p><strong>Air yang ditambahkan:</strong> {V2 - V1:.2f} mL</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Visualisasi
+                            fig = go.Figure()
+                            fig.add_trace(go.Bar(
+                                x=['Awal', 'Akhir'],
+                                y=[V1, V2],
+                                marker=dict(color=[tema_aktif['primary'], tema_aktif['secondary']]),
+                                text=[f'{V1:.0f} mL', f'{V2:.2f} mL'],
+                                textposition='auto',
+                            ))
+                            fig.update_layout(
+                                title="Perubahan Volume",
+                                height=300,
+                                paper_bgcolor=tema_aktif['bg_color'],
+                                plot_bgcolor=tema_aktif['card_bg'],
+                                font=dict(color=tema_aktif['text_color'])
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.error(f"❌ Terjadi kesalahan: {str(e)}")
             
             else:  # Hitung M2
-                V2 = st.number_input("Volume Akhir (V2) [mL]", min_value=0.0, value=200.0, step=10.0)
-                hitung_btn = st.button("🔢 Hitung M2", use_container_width=True)
+                V2 = st.number_input("Volume Akhir (V2) [mL]", min_value=0.001, value=200.0, step=10.0, help="Nilai harus lebih besar dari 0")
+                hitung_btn = st.button("🔢 Hitung M2", use_container_width=True, key="calc_m2")
                 
                 if hitung_btn:
-                    if V2 != 0:
-                        M2 = (M1 * V1) / V2
-                        st.markdown(f"""
-                        <div class="success-card">
-                            <h4>✅ Hasil Perhitungan</h4>
-                            <h2>M2 = {M2:.4f} mol/L</h2>
-                            <p><strong>Arti:</strong> Konsentrasi larutan setelah pengenceran menjadi {M2:.4f} mol/L</p>
-                            <p><strong>Tingkat pengenceran:</strong> {M1/M2 if M2 > 0 else 'Infinite':.2f}x</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Visualisasi
-                        fig = go.Figure()
-                        fig.add_trace(go.Bar(
-                            x=['Awal', 'Akhir'],
-                            y=[M1, M2],
-                            marker=dict(color=[tema_aktif['primary'], tema_aktif['secondary']]),
-                            text=[f'{M1:.2f} mol/L', f'{M2:.4f} mol/L'],
-                            textposition='auto',
-                        ))
-                        fig.update_layout(
-                            title="Perubahan Konsentrasi",
-                            height=300,
-                            paper_bgcolor=tema_aktif['bg_color'],
-                            plot_bgcolor=tema_aktif['card_bg'],
-                            font=dict(color=tema_aktif['text_color'])
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        st.error("❌ V2 tidak boleh nol!")
+                    try:
+                        if V2 <= 0:
+                            st.warning("⚠️ Volume akhir (V2) harus lebih besar dari 0!")
+                        else:
+                            M2 = (M1 * V1) / V2
+                            st.success(f"✅ Hasil Perhitungan")
+                            
+                            dilution_ratio = M1 / M2 if M2 > 0 else float('inf')
+                            dilution_text = f"{dilution_ratio:.2f}x" if dilution_ratio != float('inf') else "∞x"
+                            
+                            st.markdown(f"""
+                            <div class="success-card">
+                                <h4>✅ Hasil Perhitungan</h4>
+                                <h2>M2 = {M2:.4f} mol/L</h2>
+                                <p><strong>Arti:</strong> Konsentrasi larutan setelah pengenceran menjadi {M2:.4f} mol/L</p>
+                                <p><strong>Tingkat pengenceran:</strong> {dilution_text}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Visualisasi
+                            fig = go.Figure()
+                            fig.add_trace(go.Bar(
+                                x=['Awal', 'Akhir'],
+                                y=[M1, M2],
+                                marker=dict(color=[tema_aktif['primary'], tema_aktif['secondary']]),
+                                text=[f'{M1:.2f} mol/L', f'{M2:.4f} mol/L'],
+                                textposition='auto',
+                            ))
+                            fig.update_layout(
+                                title="Perubahan Konsentrasi",
+                                height=300,
+                                paper_bgcolor=tema_aktif['bg_color'],
+                                plot_bgcolor=tema_aktif['card_bg'],
+                                font=dict(color=tema_aktif['text_color'])
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.error(f"❌ Terjadi kesalahan: {str(e)}")
         
         with col2:
             st.subheader("📐 Rumus & Formula")
@@ -587,7 +605,7 @@ elif menu == "🎮 Tebak Warna Reaksi":
             
             col1, col2 = st.columns(2)
             with col1:
-                if st.button(f"✅ Cek Jawaban {idx+1}", use_container_width=True):
+                if st.button(f"✅ Cek Jawaban {idx+1}", use_container_width=True, key=f"check_{idx}"):
                     st.session_state.total += 1
                     
                     if jawaban_user == soal['jawaban']:
@@ -608,7 +626,7 @@ elif menu == "🎮 Tebak Warna Reaksi":
                         """, unsafe_allow_html=True)
             
             with col2:
-                if st.button("💡 Lihat Penjelasan", use_container_width=True):
+                if st.button("💡 Lihat Penjelasan", use_container_width=True, key=f"explain_{idx}"):
                     st.info(soal['penjelasan'])
 
 # ==================== ANALISIS KESALAHAN ====================
@@ -631,7 +649,7 @@ elif menu == "🧠 Analisis Kesalahan Praktikum":
         )
     
     with col2:
-        if st.button("🔍 Analisis", use_container_width=True):
+        if st.button("🔍 Analisis", use_container_width=True, key="analisis_btn"):
             st.session_state.analisis = True
     
     st.divider()
@@ -817,8 +835,11 @@ elif menu == "📚 Panduan & Tips":
             ]
         }
         
-        df_reaksi = pd.DataFrame(data_reaksi)
-        st.dataframe(df_reaksi, use_container_width=True)
+        try:
+            df_reaksi = pd.DataFrame(data_reaksi)
+            st.dataframe(df_reaksi, use_container_width=True)
+        except Exception as e:
+            st.error(f"Terjadi kesalahan saat menampilkan tabel: {str(e)}")
 
 st.divider()
 st.markdown(f"""
